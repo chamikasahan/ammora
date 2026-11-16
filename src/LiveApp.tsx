@@ -104,10 +104,24 @@ function NetworkBadge({ compact = false }: { compact?: boolean }) {
 
 function WalletButton() {
   const { address, chainId, isConnected } = useAccount()
-  const { connect, isPending: connecting } = useConnect()
+  const { connectAsync, isPending: connecting } = useConnect()
   const { disconnect } = useDisconnect()
   const { switchChain, isPending: switching } = useSwitchChain()
-  if (!isConnected) return <button type="button" className="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60" disabled={connecting} onClick={() => connect({ connector: injected() })}><Wallet size={16} />{connecting ? 'Connecting...' : 'Connect Wallet'}</button>
+  const [connectionError, setConnectionError] = useState('')
+
+  const handleConnect = async () => {
+    setConnectionError('')
+    try {
+      await connectAsync({ connector: injected() })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Wallet connection failed.'
+      setConnectionError(/connector not found|provider.*not found|no .*wallet/i.test(message)
+        ? 'No wallet extension was found. Install or enable MetaMask, then retry.'
+        : message)
+    }
+  }
+
+  if (!isConnected) return <div className="relative"><button type="button" className="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60" disabled={connecting} onClick={() => void handleConnect()}><Wallet size={16} />{connecting ? 'Connecting...' : 'Connect Wallet'}</button>{connectionError && <p role="alert" className="absolute right-0 top-full z-50 mt-2 w-72 border-l-2 border-rose-400 bg-slate-900 px-3 py-2 text-xs text-rose-100 shadow-lg">{connectionError}</p>}</div>
   return <div className="flex items-center gap-2">{chainId !== GIWA_SEPOLIA.id ? <button type="button" className="rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-slate-950" disabled={switching} onClick={() => switchChain({ chainId: GIWA_SEPOLIA.id })}>{switching ? 'Switching...' : 'Switch to GIWA'}</button> : <span className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-200">{shortAddress(address)}</span>}<button type="button" aria-label="Disconnect wallet" title="Disconnect wallet" className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:text-white" onClick={() => disconnect()}>Disconnect</button></div>
 }
 
@@ -120,7 +134,7 @@ function HomePage() {
     <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20"><div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr]"><div><div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200">GIWA Sepolia · Ammora V4</div><h1 className="max-w-2xl text-4xl font-black text-white sm:text-5xl lg:text-6xl">Launch tokens on a live market.</h1><p className="mt-6 max-w-xl text-lg text-slate-300">Explore Ammora launches, review live curve state, and create or trade with your connected wallet.</p><div className="mt-8 flex flex-wrap gap-3"><Link to="/explore" className="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-5 py-3 font-semibold text-slate-950 hover:bg-emerald-300">Explore launches <ArrowRight size={18} /></Link><Link to="/create" className="rounded-lg border border-slate-700 bg-slate-900 px-5 py-3 font-semibold text-white hover:border-slate-500">Create token</Link></div></div>
       <div className="border-l-2 border-emerald-400 py-2 pl-6 sm:pl-8"><div className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">Indexer snapshot</div>{launches.isLoading ? <p className="mt-5 text-slate-300">Loading GIWA launches...</p> : launches.isError ? <ErrorMessage message={dataApiError(launches.error, 'Could not load launches.')} /> : <><dl className="mt-5 grid grid-cols-2 gap-x-8 gap-y-5"><Stat label="Loaded launches" value={String(items.length)} /><Stat label="Active in page" value={String(activeCount)} /><Stat label="Ready in page" value={String(migrationCount)} /><Stat label="Network" value="GIWA Sepolia" /></dl><a className="mt-6 inline-flex items-center gap-1 text-sm text-emerald-300 hover:text-emerald-200" href={NETWORK_CONFIG.explorerUrl} target="_blank" rel="noreferrer">GIWA Explorer <ExternalLink size={14} /></a></>}</div>
     </div></section>
-    <section className="border-y border-slate-800 bg-slate-900/50"><div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8"><div className="mb-7 flex items-end justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-300">Latest</p><h2 className="mt-2 text-2xl font-bold text-white">On-chain launches</h2></div><Link to="/explore" className="inline-flex items-center gap-2 text-sm font-medium text-emerald-300 hover:text-emerald-200">All launches <ArrowRight size={16} /></Link></div>{launches.isLoading ? <LoadingMessage /> : launches.isError ? <ErrorMessage message="Could not load launches from the Ammora Data API." /> : items.length ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{items.slice(0, 6).map((launch) => <TokenCard key={launch.id} launch={launch} />)}</div> : <EmptyMessage message="No GIWA launches are indexed yet." />}</div></section>
+    <section className="border-y border-slate-800 bg-slate-900/50"><div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8"><div className="mb-7 flex items-end justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-[0.16em] text-emerald-300">Latest</p><h2 className="mt-2 text-2xl font-bold text-white">On-chain launches</h2></div><Link to="/explore" className="inline-flex items-center gap-2 text-sm font-medium text-emerald-300 hover:text-emerald-200">All launches <ArrowRight size={16} /></Link></div>{launches.isLoading ? <LoadingMessage /> : launches.isError ? <ErrorMessage message={dataApiError(launches.error, 'Could not load launches from the Ammora Data API.')} /> : items.length ? <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{items.slice(0, 6).map((launch) => <TokenCard key={launch.id} launch={launch} />)}</div> : <EmptyMessage message="No GIWA launches are indexed yet." />}</div></section>
   </>
 }
 
