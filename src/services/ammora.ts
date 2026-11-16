@@ -29,16 +29,16 @@ export function getLaunches(parameters: {
   query?: string
   signal?: AbortSignal
 } = {}) {
-  return ammoraData.getLaunches({ chainId: NETWORK_CONFIG.chainId, ...parameters, signal: apiSignal(parameters.signal) })
+  return ammoraData.getLaunches({ chainId: BigInt(NETWORK_CONFIG.chainId), ...parameters, signal: apiSignal(parameters.signal) })
 }
 
 export async function getLaunch(address: Address, signal?: AbortSignal): Promise<AmmoraLaunch> {
-  return ammoraData.getLaunch(NETWORK_CONFIG.chainId, address, apiSignal(signal))
+  return ammoraData.getLaunch(BigInt(NETWORK_CONFIG.chainId), address, apiSignal(signal))
 }
 
 export async function getEnabledV4Configs(signal?: AbortSignal) {
   return ammoraData.getAmmV4Configs({
-    chainId: NETWORK_CONFIG.chainId,
+    chainId: BigInt(NETWORK_CONFIG.chainId),
     registry: giwaV4.contracts.launch.configRegistry,
     enabled: true,
     signal: apiSignal(signal),
